@@ -183,12 +183,12 @@
 </head>
 <body>
 
-<div class="phone-frame">
-    <div class="header">
         <h1 id="header-title">MIS PLATOS</h1>
         <p id="header-subtitle">Cargando desde la nube...</p>
-        <button class="add-btn-header" id="add-btn" onclick="openModal()">+</button>
-    </div>
+        <div style="position: absolute; top: 25px; right: 20px; display: flex; gap: 8px;">
+            <button onclick="loadPlatosFromCloud()" style="background: white; color: #2980b9; width: 34px; height: 34px; border-radius: 50%; border: none; font-size: 16px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">🔄</button>
+            <button class="add-btn-header" id="add-btn" onclick="openModal()" style="position: static;">+</button>
+        </div>
 
     <div class="content">
         <div class="tab active" id="tab-platos">
