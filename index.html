@@ -42,7 +42,6 @@
         .section-title { font-size: 18px; font-weight: 700; color: #2C2C2C; margin-bottom: 15px; font-style: italic; }
         .platos-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
         
-        /* TARJETA DE PLATO CON BOTONES DE ACCIÓN */
         .plato-card { 
             background: white; border-radius: 14px; overflow: hidden; 
             box-shadow: 0 3px 10px rgba(0,0,0,0.06); cursor: pointer; transition: transform 0.2s; 
@@ -54,7 +53,6 @@
         .plato-card.add-card { background: #F5F0E1; display: flex; align-items: center; justify-content: center; height: 140px; border: 2px dashed #6B8E23; }
         .plato-card.add-card .plus { font-size: 40px; color: #E67E22; font-weight: 300; }
         
-        /* Botones de Editar y Eliminar en la tarjeta */
         .card-actions {
             position: absolute; top: 5px; right: 5px; display: flex; gap: 4px;
         }
@@ -106,7 +104,8 @@
         .detail-link { color: #E67E22; font-size: 13px; word-break: break-all; text-decoration: none; font-weight: 600; }
 
         .week-selector { display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 20px; font-size: 14px; font-weight: 600; color: #2C2C2C; }
-        .week-selector .arrow { cursor: pointer; font-size: 20px; color: #6B8E23; padding: 5px; }
+        .week-selector .arrow { cursor: pointer; font-size: 20px; color: #6B8E23; padding: 5px; user-select: none; }
+        .week-selector .arrow:hover { color: #4A7023; }
         
         .days-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
         .day-block { 
@@ -175,8 +174,7 @@
             position: relative; overflow: hidden; transition: border 0.2s;
         }
         .photo-upload:hover { border-color: #6B8E23; }
-    </style>
-</head>
+    </style</head>
 <body>
 
 <div class="phone-frame">
@@ -196,26 +194,34 @@
             <img src="" class="detail-hero" id="detail-img">
             <h2 style="font-size:22px; color:#2C2C2C; margin-bottom:20px; font-weight:700;" id="detail-name"></h2>
             <div class="detail-section"><h3>🧾 Cuadro de Insumos</h3><ul class="detail-list" id="detail-insumos"></ul></div>
-            <div class="detail-section"><h3> Preparación</h3><div class="detail-text" id="detail-recipe"></div></div>
+            <div class="detail-section"><h3>👨‍🍳 Preparación</h3><div class="detail-text" id="detail-recipe"></div></div>
             <div class="detail-section" id="detail-link-container"><h3>🔗 Link Original</h3><a id="detail-link" href="#" target="_blank" class="detail-link"></a></div>
         </div>
 
         <div class="tab" id="tab-seleccionar">
-            <div class="week-selector"><span class="arrow">◀</span><span>Semana: 21-27 Septiembre 2026</span><span class="arrow">▶</span></div>
+            <div class="week-selector">
+                <span class="arrow" onclick="changeWeek(-1)">◀</span>
+                <span id="week-range-text">Semana: ...</span>
+                <span class="arrow" onclick="changeWeek(1)">▶</span>
+            </div>
             <div class="days-grid" id="days-grid"></div>
             <div class="week-actions">
                 <button class="btn-outline" onclick="switchTab('menu', document.querySelectorAll('.nav-item')[3])">Ver menú semanal</button>
-                <button class="btn-solid" onclick="saveMenuToCloud()">💾 Guardar Menú</button>
+                <button class="btn-solid" onclick="saveCurrentWeekMenu()">💾 Guardar Menú</button>
             </div>
         </div>
 
         <div class="tab" id="tab-menu">
-            <div class="week-selector"><span class="arrow">◀</span><span>Sep 21-27</span><span class="arrow">▶</span></div>
+            <div class="week-selector">
+                <span class="arrow" onclick="changeWeek(-1)">◀</span>
+                <span id="menu-week-range-text">Semana: ...</span>
+                <span class="arrow" onclick="changeWeek(1)">▶</span>
+            </div>
             <div class="menu-grid-container" id="menu-list"></div>
         </div>
 
         <div class="tab" id="tab-insumos">
-            <div class="week-selector" style="margin-bottom: 15px;"><span>📅 Semana: 21-27 Septiembre 2026</span></div>
+            <div class="week-selector" style="margin-bottom: 15px;"><span id="insumos-week-range-text">📅 Semana: ...</span></div>
             <div id="printable-insumos">
                 <div id="insumos-container"></div>
                 <div class="insumos-summary" id="insumos-summary"></div>
@@ -228,10 +234,10 @@
     </div>
 
     <div class="nav-bar">
-        <div class="nav-item active" onclick="switchTab('platos', this)"><span class="icon"></span><span>Platos</span></div>
+        <div class="nav-item active" onclick="switchTab('platos', this)"><span class="icon">📋</span><span>Platos</span></div>
         <div class="nav-item" onclick="switchTab('receta', this)"><span class="icon">📖</span><span>Receta</span></div>
         <div class="nav-item" onclick="switchTab('seleccionar', this)"><span class="icon">🥣</span><span>Lista</span></div>
-        <div class="nav-item" onclick="switchTab('menu', this)"><span class="icon"></span><span>Menú</span></div>
+        <div class="nav-item" onclick="switchTab('menu', this)"><span class="icon">📅</span><span>Menú</span></div>
         <div class="nav-item" onclick="switchTab('insumos', this)"><span class="icon">🛒</span><span>Insumos</span></div>
     </div>
 </div>
@@ -272,37 +278,95 @@
     const API_URL = 'https://sheetdb.io/api/v1/dws3xpobma4f2'; 
 
     let platos = [];
-    const diasSemana = ['Lunes 21', 'Martes 22', 'Miércoles 23', 'Jueves 24', 'Viernes 25', 'Sábado 26', 'Domingo 27'];
-    let menuSemanal = [null, null, null, null, null, null, null]; 
-    let currentImageBase64 = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300";
-    let editingId = null; // Variable para saber si estamos editando o creando
+    let currentWeekOffset = 0; // 0 = semana actual, -1 = anterior, 1 = siguiente
+    let weeklyMenus = JSON.parse(localStorage.getItem('weeklyMenus') || '{}'); // Guarda el menú por ID de semana
+
+    // =========================================
+    // LÓGICA DE CALENDARIO Y SEMANAS
+    // =========================================
+    function getWeekData(offset = 0) {
+        const today = new Date();
+        const currentDay = today.getDay(); // 0 (Dom) a 6 (Sáb)
+        const diff = today.getDate() - currentDay + (currentDay === 0 ? -6 : 1); // Ajustar al Lunes
+        
+        const monday = new Date(today);
+        monday.setDate(diff + (offset * 7));
+
+        const days = [];
+        const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+        const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(monday);
+            d.setDate(monday.getDate() + i);
+            days.push({
+                fullName: `${dayNames[d.getDay()]} ${d.getDate()}`,
+                shortName: dayNames[d.getDay()],
+                dateNum: d.getDate(),
+                month: monthNames[d.getMonth()],
+                year: d.getFullYear()
+            });
+        }
+
+        const firstDay = days[0].dateNum;
+        const lastDay = days[6].dateNum;
+        const monthStr = days[0].month;
+        const yearStr = days[0].year;
+        const weekId = `${yearStr}-W${getWeekNumber(monday)}`;
+
+        return { days, weekId, rangeText: `${firstDay}-${lastDay} ${monthStr} ${yearStr}` };
+    }
+
+    function getWeekNumber(d) {
+        d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+        d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+        const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+        return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+    }
+
+    function changeWeek(direction) {
+        currentWeekOffset += direction;
+        renderWeekViews();
+    }
+
+    function renderWeekViews() {
+        const weekData = getWeekData(currentWeekOffset);
+        
+        // Actualizar textos de rango de semanas
+        const rangeText = `Semana: ${weekData.rangeText}`;
+        document.getElementById('week-range-text').textContent = rangeText;
+        document.getElementById('menu-week-range-text').textContent = rangeText;
+        document.getElementById('insumos-week-range-text').textContent = `📅 ${rangeText}`;
+
+        // Cargar menú de esta semana específica
+        const currentMenu = weeklyMenus[weekData.weekId] || [null, null, null, null, null, null, null];
+        
+        // Renderizar días y menú con los datos de esta semana
+        renderDays(weekData.days, currentMenu);
+        renderMenu(weekData.days, currentMenu);
+        renderInsumos(weekData.days, currentMenu);
+    }
 
     // =========================================
     // MANEJO DE IMAGEN
     // =========================================
+    let currentImageBase64 = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300";
     function handleImageUpload(event) {
         const file = event.target.files[0];
         if (!file) return;
-
         const reader = new FileReader();
         reader.onload = function(e) {
             const img = new Image();
             img.onload = function() {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
-                const maxWidth = 800; const maxHeight = 800;
-                let width = img.width; let height = img.height;
-
-                if (width > height) {
-                    if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; }
-                } else {
-                    if (height > maxHeight) { width *= maxHeight / height; height = maxHeight; }
-                }
-
+                let width = img.width, height = img.height;
+                const max = 800;
+                if (width > height) { if (width > max) { height *= max / width; width = max; } } 
+                else { if (height > max) { width *= max / height; height = max; } }
                 canvas.width = width; canvas.height = height;
                 ctx.drawImage(img, 0, 0, width, height);
                 currentImageBase64 = canvas.toDataURL('image/jpeg', 0.6);
-
                 const preview = document.getElementById('foto-preview');
                 preview.src = currentImageBase64;
                 preview.style.display = 'block';
@@ -321,18 +385,14 @@
             document.getElementById('header-subtitle').textContent = 'Conectando con la nube...';
             const response = await fetch(API_URL);
             const data = await response.json();
-            
             platos = data.map(p => ({
-                id: p.ID,
-                name: p.Nombre,
+                id: p.ID, name: p.Nombre,
                 img: p.Imagen || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300",
-                insumos: JSON.parse(p.Insumos || '[]'),
-                recipe: p.Receta,
-                link: p.Link
+                insumos: JSON.parse(p.Insumos || '[]'), recipe: p.Receta, link: p.Link
             }));
-
             document.getElementById('header-subtitle').textContent = 'Tu base de datos de comidas';
-            renderGrid(); renderDays(); renderMenu();
+            renderGrid();
+            renderWeekViews(); // Renderizar semanas después de tener los platos
         } catch (error) {
             console.error("Error cargando platos:", error);
             document.getElementById('header-subtitle').textContent = 'Error de conexión.';
@@ -340,7 +400,7 @@
     }
 
     // =========================================
-    // RENDERIZADO (CON BOTONES EDITAR/ELIMINAR)
+    // RENDERIZADO
     // =========================================
     function renderGrid() {
         const grid = document.getElementById('platos-grid'); grid.innerHTML = '';
@@ -349,7 +409,7 @@
             <div class="plato-card" onclick="viewDetail('${p.id}')">
                 <div class="card-actions">
                     <button class="btn-edit-card" onclick="event.stopPropagation(); editPlato('${p.id}')" title="Editar">✏️</button>
-                    <button class="btn-delete-card" onclick="event.stopPropagation(); deletePlato('${p.id}')" title="Eliminar">️</button>
+                    <button class="btn-delete-card" onclick="event.stopPropagation(); deletePlato('${p.id}')" title="Eliminar">🗑️</button>
                 </div>
                 <img src="${p.img}" alt="${p.name}" loading="lazy">
                 <div class="name">${p.name}</div>
@@ -358,49 +418,113 @@
         grid.innerHTML += `<div class="plato-card add-card" onclick="openModal()"><span class="plus">+</span></div>`;
     }
 
-    function renderDays() {
+    function renderDays(days, currentMenu) {
         const container = document.getElementById('days-grid'); container.innerHTML = '';
-        diasSemana.forEach((dia, index) => {
-            const platoIndex = menuSemanal[index];
-            if (platoIndex !== null && platos[platoIndex]) {
-                const p = platos[platoIndex];
-                container.innerHTML += `<div class="day-block filled" onclick="openSelectModal(${index})"><img src="${p.img}" alt="${p.name}"><div class="plato-name">${p.name}</div><div class="actions"><button onclick="event.stopPropagation(); openSelectModal(${index})">Cambiar</button><button onclick="event.stopPropagation(); viewDetail('${p.id}')">Ver receta</button></div></div>`;
+        days.forEach((day, index) => {
+            const platoId = currentMenu[index];
+            const p = platos.find(x => x.id == platoId);
+            if (p) {
+                container.innerHTML += `
+                <div class="day-block filled" onclick="openSelectModal(${index})">
+                    <img src="${p.img}" alt="${p.name}">
+                    <div class="plato-name">${p.name}</div>
+                    <div class="actions">
+                        <button onclick="event.stopPropagation(); openSelectModal(${index})">Cambiar</button>
+                        <button onclick="event.stopPropagation(); viewDetail('${p.id}')">Ver receta</button>
+                    </div>
+                </div>`;
             } else {
-                container.innerHTML += `<div class="day-block empty" onclick="openSelectModal(${index})"><div class="day-name">${dia}</div><div class="status-icon">+</div></div>`;
+                container.innerHTML += `
+                <div class="day-block empty" onclick="openSelectModal(${index})">
+                    <div class="day-name">${day.fullName}</div>
+                    <div class="status-icon">+</div>
+                </div>`;
             }
         });
     }
 
-    function renderMenu() {
+    function renderMenu(days, currentMenu) {
         const container = document.getElementById('menu-list'); container.innerHTML = '';
-        diasSemana.forEach((dia, index) => {
-            const parts = dia.split(' '); const dayName = parts[0]; const dayNum = parts[1];
-            const platoIndex = menuSemanal[index];
-            if (platoIndex !== null && platos[platoIndex]) {
-                const p = platos[platoIndex];
-                container.innerHTML += `<div class="menu-card"><div class="menu-card-header"><span class="menu-card-day">${dayName}</span><span class="menu-card-date">${dayNum}</span></div><div class="menu-card-body"><div class="menu-card-plato">${p.name}</div></div><div class="menu-card-actions"><button onclick="openSelectModal(${index})">Cambiar</button><button onclick="viewDetail('${p.id}')">Ver receta</button></div></div>`;
+        days.forEach((day, index) => {
+            const platoId = currentMenu[index];
+            const p = platos.find(x => x.id == platoId);
+            if (p) {
+                container.innerHTML += `
+                <div class="menu-card">
+                    <div class="menu-card-header"><span class="menu-card-day">${day.shortName}</span><span class="menu-card-date">${day.dateNum} ${day.month}</span></div>
+                    <div class="menu-card-body"><div class="menu-card-plato">${p.name}</div></div>
+                    <div class="menu-card-actions">
+                        <button onclick="openSelectModal(${index})">Cambiar</button>
+                        <button onclick="viewDetail('${p.id}')">Ver receta</button>
+                    </div>
+                </div>`;
             } else {
-                container.innerHTML += `<div class="menu-card" style="opacity: 0.7;"><div class="menu-card-header"><span class="menu-card-day">${dayName}</span><span class="menu-card-date">${dayNum}</span></div><div class="menu-card-body"><div class="menu-card-empty">Sin plato asignado</div></div><div class="menu-card-actions"><button onclick="openSelectModal(${index})" style="border-color:#ccc; color:#888;">Asignar plato</button></div></div>`;
+                container.innerHTML += `
+                <div class="menu-card" style="opacity: 0.7;">
+                    <div class="menu-card-header"><span class="menu-card-day">${day.shortName}</span><span class="menu-card-date">${day.dateNum} ${day.month}</span></div>
+                    <div class="menu-card-body"><div class="menu-card-empty">Sin plato asignado</div></div>
+                    <div class="menu-card-actions"><button onclick="openSelectModal(${index})" style="border-color:#ccc; color:#888;">Asignar</button></div>
+                </div>`;
             }
         });
     }
 
-    function renderInsumos() {
-        const container = document.getElementById('insumos-container'); const summaryContainer = document.getElementById('insumos-summary'); container.innerHTML = '';
+    function renderInsumos(days, currentMenu) {
+        const container = document.getElementById('insumos-container'); 
+        const summaryContainer = document.getElementById('insumos-summary'); 
+        container.innerHTML = '';
         let allInsumos = new Set(); let totalPlatos = 0;
-        menuSemanal.forEach(idx => { if (idx !== null && platos[idx]) { totalPlatos++; platos[idx].insumos.forEach(ins => allInsumos.add(ins.toLowerCase())); } });
-        if (totalPlatos === 0) { container.innerHTML = '<p style="text-align:center; color:#888; margin-top:40px;">Aún no has asignado platos a la semana.</p>'; summaryContainer.innerHTML = ''; return; }
-        const categorias = { '🥩 PROTEÍNAS': ['pollo', 'carne', 'res', 'cerdo', 'pescado', 'salmón', 'atún', 'huevo', 'huevos', 'mariscos'], '🥬 VERDURAS Y FRUTAS': ['cebolla', 'ajo', 'tomate', 'lechuga', 'zanahoria', 'papa', 'camote', 'limón', 'culantro', 'cilantro', 'ají', 'perejil', 'romero', 'laurel', 'verdura', 'fruta'], '🌾 GRANOS Y DESPENSA': ['arroz', 'pasta', 'fideo', 'pan', 'harina', 'azúcar', 'sal', 'pimienta', 'comino', 'páprika', 'aceite', 'vinagre', 'caldo', 'salsa', 'conserva'] };
+        
+        currentMenu.forEach(platoId => { 
+            const p = platos.find(x => x.id == platoId);
+            if (p) { 
+                totalPlatos++; 
+                p.insumos.forEach(ins => allInsumos.add(ins.toLowerCase())); 
+            } 
+        });
+
+        if (totalPlatos === 0) { 
+            container.innerHTML = '<p style="text-align:center; color:#888; margin-top:40px;">Aún no has asignado platos a esta semana.</p>'; 
+            summaryContainer.innerHTML = ''; return; 
+        }
+
+        const categorias = { 
+            '🥩 PROTEÍNAS': ['pollo', 'carne', 'res', 'cerdo', 'pescado', 'salmón', 'atún', 'huevo', 'huevos', 'mariscos'], 
+            '🥬 VERDURAS Y FRUTAS': ['cebolla', 'ajo', 'tomate', 'lechuga', 'zanahoria', 'papa', 'camote', 'limón', 'culantro', 'cilantro', 'ají', 'perejil', 'romero', 'laurel', 'verdura', 'fruta'], 
+            '🌾 GRANOS Y DESPENSA': ['arroz', 'pasta', 'fideo', 'pan', 'harina', 'azúcar', 'sal', 'pimienta', 'comino', 'páprika', 'aceite', 'vinagre', 'caldo', 'salsa', 'conserva'] 
+        };
         let categorized = {}; Object.keys(categorias).forEach(cat => categorized[cat] = []); let otros = [];
-        allInsumos.forEach(ins => { let placed = false; for (let cat in categorias) { if (categorias[cat].some(keyword => ins.includes(keyword))) { categorized[cat].push(ins); placed = true; break; } } if (!placed) otros.push(ins); });
+        
+        allInsumos.forEach(ins => { 
+            let placed = false; 
+            for (let cat in categorias) { 
+                if (categorias[cat].some(keyword => ins.includes(keyword))) { categorized[cat].push(ins); placed = true; break; } 
+            } 
+            if (!placed) otros.push(ins); 
+        });
         if (otros.length > 0) categorized['📦 OTROS'] = otros;
+
         let totalCount = 0;
-        for (let cat in categorized) { if (categorized[cat].length === 0) continue; totalCount += categorized[cat].length; let itemsHtml = categorized[cat].map(item => `<div class="insumo-item"><input type="checkbox" onchange="this.parentElement.classList.toggle('checked', this.checked)"><span>${item.charAt(0).toUpperCase() + item.slice(1)}</span></div>`).join(''); container.innerHTML += `<div class="insumos-category"><h3>${cat}</h3>${itemsHtml}</div>`; }
+        for (let cat in categorized) { 
+            if (categorized[cat].length === 0) continue; 
+            totalCount += categorized[cat].length; 
+            let itemsHtml = categorized[cat].map(item => `<div class="insumo-item"><input type="checkbox" onchange="this.parentElement.classList.toggle('checked', this.checked)"><span>${item.charAt(0).toUpperCase() + item.slice(1)}</span></div>`).join(''); 
+            container.innerHTML += `<div class="insumos-category"><h3>${cat}</h3>${itemsHtml}</div>`; 
+        }
         summaryContainer.innerHTML = `<p>🍽️ ${totalPlatos} platos seleccionados</p><p>🛒 ${totalCount} insumos únicos necesarios</p>`;
     }
 
     function exportPDF() { window.print(); }
-    function exportWord() { const content = document.getElementById('printable-insumos').innerHTML; const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Lista de Insumos</title></head><body>"; const footer = "</body></html>"; const sourceHTML = header + content + footer; const blob = new Blob(['\ufeff', sourceHTML], { type: 'application/msword' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = 'lista-insumos-semanal.doc'; document.body.appendChild(link); link.click(); document.body.removeChild(link); }
+    function exportWord() { 
+        const content = document.getElementById('printable-insumos').innerHTML; 
+        const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Lista de Insumos</title></head><body>"; 
+        const footer = "</body></html>"; 
+        const sourceHTML = header + content + footer; 
+        const blob = new Blob(['\ufeff', sourceHTML], { type: 'application/msword' }); 
+        const url = URL.createObjectURL(blob); 
+        const link = document.createElement('a'); link.href = url; link.download = 'lista-insumos-semanal.doc'; 
+        document.body.appendChild(link); link.click(); document.body.removeChild(link); 
+    }
 
     function switchTab(tabId, el) {
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -411,7 +535,7 @@
         document.getElementById('header-title').textContent = titles[tabId][0];
         document.getElementById('header-subtitle').textContent = titles[tabId][1];
         document.getElementById('add-btn').style.display = tabId === 'platos' ? 'flex' : 'none';
-        if(tabId === 'menu') renderMenu(); if(tabId === 'seleccionar') renderDays(); if(tabId === 'insumos') renderInsumos();
+        if(tabId === 'seleccionar' || tabId === 'menu' || tabId === 'insumos') renderWeekViews();
     }
 
     function viewDetail(id) {
@@ -430,6 +554,7 @@
     // =========================================
     // LÓGICA DE MODAL (CREAR / EDITAR)
     // =========================================
+    let editingId = null;
     function openModal() { 
         editingId = null;
         document.getElementById('modal-title').textContent = 'Nuevo Plato';
@@ -437,86 +562,50 @@
         resetForm(); 
         document.getElementById('add-modal').classList.add('active'); 
     }
-
     function closeModal(id) { document.getElementById(id || 'add-modal').classList.remove('active'); }
 
-    // FUNCIÓN PARA EDITAR
     function editPlato(id) {
-        const p = platos.find(x => x.id == id);
-        if (!p) return;
-
+        const p = platos.find(x => x.id == id); if (!p) return;
         editingId = id;
         document.getElementById('modal-title').textContent = 'Editar Plato';
-        document.getElementById('btn-save-action').textContent = '️ ACTUALIZAR EN LA NUBE';
-        
-        // Llenar campos
+        document.getElementById('btn-save-action').textContent = '🔄 ACTUALIZAR EN LA NUBE';
         document.getElementById('inp-name').value = p.name;
         document.getElementById('inp-insumos').value = p.insumos.join('\n');
         document.getElementById('inp-recipe').value = p.recipe || '';
         document.getElementById('inp-link').value = p.link || '';
-        
-        // Mostrar imagen actual
         currentImageBase64 = p.img;
         const preview = document.getElementById('foto-preview');
-        preview.src = currentImageBase64;
-        preview.style.display = 'block';
+        preview.src = currentImageBase64; preview.style.display = 'block';
         document.getElementById('foto-text').style.display = 'none';
-        
         document.getElementById('add-modal').classList.add('active');
     }
 
-    // FUNCIÓN PARA ELIMINAR
     async function deletePlato(id) {
         if (!confirm('⚠️ ¿Estás seguro de que quieres eliminar este plato de tu base de datos?')) return;
-
-        const btn = document.querySelector('.btn-save'); // Usamos un indicador visual temporal si se desea, pero aquí es directo
         try {
-            // Eliminar en SheetDB usando la columna ID
             await fetch(`${API_URL}/ID/${id}`, { method: 'DELETE' });
-            
-            // Eliminar localmente
             platos = platos.filter(p => p.id != id);
-            
-            // Limpiar menú si estaba asignado
-            menuSemanal = menuSemanal.map(idx => (platos[idx] ? idx : null));
-            
-            renderGrid(); renderDays(); renderMenu();
+            renderGrid(); renderWeekViews();
             alert('🗑️ Plato eliminado correctamente.');
-        } catch (error) {
-            alert('❌ Error al eliminar. Revisa tu conexión.');
-        }
+        } catch (error) { alert('❌ Error al eliminar. Revisa tu conexión.'); }
     }
 
-    // FUNCIÓN UNIFICADA PARA GUARDAR O ACTUALIZAR
     async function handleSaveOrUpdate() {
-        if (editingId) {
-            await updatePlato(editingId);
-        } else {
-            await saveNewPlato();
-        }
+        if (editingId) await updatePlato(editingId); else await saveNewPlato();
     }
 
-    // GUARDAR NUEVO
     async function saveNewPlato() {
         const name = document.getElementById('inp-name').value.trim();
         const rawInsumos = document.getElementById('inp-insumos').value;
         const recipe = document.getElementById('inp-recipe').value.trim();
         const link = document.getElementById('inp-link').value.trim();
-
         if (!name) { alert('⚠️ Escribe un nombre para el plato'); return; }
         if (!rawInsumos.trim()) { alert('⚠️ Pega la lista de insumos'); return; }
-
         const insumosList = rawInsumos.split('\n').map(line => line.replace(/^[\s]*[\d\.\-\*\•\)]+[\s]*/, '').trim()).filter(line => line.length > 2);
         const newId = Date.now().toString();
-
-        const nuevoPlato = {
-            ID: newId, Nombre: name, Imagen: currentImageBase64,
-            Insumos: JSON.stringify(insumosList), Receta: recipe, Link: link
-        };
-
+        const nuevoPlato = { ID: newId, Nombre: name, Imagen: currentImageBase64, Insumos: JSON.stringify(insumosList), Receta: recipe, Link: link };
         const btn = document.getElementById('btn-save-action');
-        const originalText = btn.textContent; btn.textContent = '️ Guardando...'; btn.disabled = true;
-
+        const originalText = btn.textContent; btn.textContent = '⏳ Guardando...'; btn.disabled = true;
         try {
             await fetch(API_URL, { method: 'POST', headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify({ data: nuevoPlato }) });
             platos.push({ id: newId, name: name, img: currentImageBase64, insumos: insumosList, recipe: recipe, link: link });
@@ -525,53 +614,48 @@
         finally { btn.textContent = originalText; btn.disabled = false; }
     }
 
-    // ACTUALIZAR EXISTENTE
     async function updatePlato(id) {
         const name = document.getElementById('inp-name').value.trim();
         const rawInsumos = document.getElementById('inp-insumos').value;
         const recipe = document.getElementById('inp-recipe').value.trim();
         const link = document.getElementById('inp-link').value.trim();
-
-        if (!name) { alert('️ Escribe un nombre para el plato'); return; }
+        if (!name) { alert('⚠️ Escribe un nombre para el plato'); return; }
         if (!rawInsumos.trim()) { alert('⚠️ Pega la lista de insumos'); return; }
-
         const insumosList = rawInsumos.split('\n').map(line => line.replace(/^[\s]*[\d\.\-\*\•\)]+[\s]*/, '').trim()).filter(line => line.length > 2);
-
-        const platoActualizado = {
-            Nombre: name, Imagen: currentImageBase64,
-            Insumos: JSON.stringify(insumosList), Receta: recipe, Link: link
-        };
-
+        const platoActualizado = { Nombre: name, Imagen: currentImageBase64, Insumos: JSON.stringify(insumosList), Receta: recipe, Link: link };
         const btn = document.getElementById('btn-save-action');
-        const originalText = btn.textContent; btn.textContent = '☁️ Actualizando...'; btn.disabled = true;
-
+        const originalText = btn.textContent; btn.textContent = '⏳ Actualizando...'; btn.disabled = true;
         try {
-            // Actualizar en SheetDB
             await fetch(`${API_URL}/ID/${id}`, { method: 'PUT', headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify({ data: platoActualizado }) });
-            
-            // Actualizar localmente
             const index = platos.findIndex(p => p.id == id);
-            if (index !== -1) {
-                platos[index] = { id: id, name: name, img: currentImageBase64, insumos: insumosList, recipe: recipe, link: link };
-            }
-            
-            renderGrid(); renderDays(); renderMenu(); closeModal(); alert(`✅ "${name}" actualizado en la NUBE!`);
+            if (index !== -1) platos[index] = { id: id, name: name, img: currentImageBase64, insumos: insumosList, recipe: recipe, link: link };
+            renderGrid(); renderWeekViews(); closeModal(); alert(`✅ "${name}" actualizado en la NUBE!`);
         } catch (error) { alert('❌ Error al actualizar.'); } 
         finally { btn.textContent = originalText; btn.disabled = false; editingId = null; }
     }
 
     function openSelectModal(dayIndex) {
-        document.getElementById('selected-day-name').textContent = diasSemana[dayIndex];
+        const weekData = getWeekData(currentWeekOffset);
+        document.getElementById('selected-day-name').textContent = weekData.days[dayIndex].fullName;
         const grid = document.getElementById('plato-selector-grid'); grid.innerHTML = '';
         platos.forEach(p => { grid.innerHTML += `<div class="plato-selector-item" onclick="assignPlato(${dayIndex}, '${p.id}')"><img src="${p.img}" alt="${p.name}"><div class="name">${p.name}</div></div>`; });
         document.getElementById('select-plato-modal').classList.add('active');
     }
 
     function assignPlato(dayIndex, platoId) {
-        const idx = platos.findIndex(p => p.id == platoId); menuSemanal[dayIndex] = idx; renderDays(); renderMenu(); closeModal('select-plato-modal');
+        const weekData = getWeekData(currentWeekOffset);
+        const currentMenu = weeklyMenus[weekData.weekId] || [null, null, null, null, null, null, null];
+        currentMenu[dayIndex] = platoId;
+        weeklyMenus[weekData.weekId] = currentMenu;
+        localStorage.setItem('weeklyMenus', JSON.stringify(weeklyMenus));
+        renderWeekViews(); closeModal('select-plato-modal');
     }
 
-    function saveMenuToCloud() { alert('✅ Menú guardado localmente.'); }
+    function saveCurrentWeekMenu() {
+        const weekData = getWeekData(currentWeekOffset);
+        localStorage.setItem('weeklyMenus', JSON.stringify(weeklyMenus));
+        alert(`✅ Menú de la semana ${weekData.rangeText} guardado correctamente.`);
+    }
 
     function resetForm() {
         document.getElementById('inp-name').value = ''; document.getElementById('inp-insumos').value = '';
