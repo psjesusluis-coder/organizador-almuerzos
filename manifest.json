@@ -1,0 +1,21 @@
+{
+  "name": "Organizador de Almuerzos",
+  "short_name": "Mis Almuerzos",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#FAF8F3",
+  "theme_color": "#6B8E23",
+  "description": "Organiza tus comidas semanales y lista de insumos",
+  "icons": [
+    {
+      "src": "https://img.icons8.com/fluency/96/food.png",
+      "sizes": "96x96",
+      "type": "image/png"
+    },
+    {
+      "src": "https://img.icons8.com/fluency/192/food.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
