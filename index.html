@@ -183,12 +183,16 @@
 </head>
 <body>
 
+<div class="phone-frame">
+    <!-- AQUÍ ESTABA EL ERROR: FALTABA EL DIV CLASS="HEADER" -->
+    <div class="header">
         <h1 id="header-title">MIS PLATOS</h1>
         <p id="header-subtitle">Cargando desde la nube...</p>
         <div style="position: absolute; top: 25px; right: 20px; display: flex; gap: 8px;">
-            <button onclick="loadPlatosFromCloud()" style="background: white; color: #2980b9; width: 34px; height: 34px; border-radius: 50%; border: none; font-size: 16px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">🔄</button>
+            <button onclick="loadPlatosFromCloud()" title="Sincronizar" style="background: white; color: #2980b9; width: 34px; height: 34px; border-radius: 50%; border: none; font-size: 16px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">🔄</button>
             <button class="add-btn-header" id="add-btn" onclick="openModal()" style="position: static;">+</button>
         </div>
+    </div>
 
     <div class="content">
         <div class="tab active" id="tab-platos">
@@ -362,12 +366,12 @@
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
                 let width = img.width, height = img.height;
-                const max = 800;
+                const max = 500; // Reducido a 500 para evitar que SheetDB rechace la imagen por peso
                 if (width > height) { if (width > max) { height *= max / width; width = max; } } 
                 else { if (height > max) { width *= max / height; height = max; } }
                 canvas.width = width; canvas.height = height;
                 ctx.drawImage(img, 0, 0, width, height);
-                currentImageBase64 = canvas.toDataURL('image/jpeg', 0.6);
+                currentImageBase64 = canvas.toDataURL('image/jpeg', 0.5); // Calidad 0.5 para mayor compatibilidad
                 const preview = document.getElementById('foto-preview');
                 preview.src = currentImageBase64;
                 preview.style.display = 'block';
@@ -379,12 +383,13 @@
     }
 
     // =========================================
-    // CARGAR DATOS DESDE LA NUBE
+    // CARGAR DATOS DESDE LA NUBE (CON SOLUCIÓN DE DEMORA)
     // =========================================
     async function loadPlatosFromCloud() {
         try {
-            document.getElementById('header-subtitle').textContent = 'Conectando con la nube...';
-            const response = await fetch(API_URL);
+            document.getElementById('header-subtitle').textContent = 'Sincronizando...';
+            // EL TRUCO: '?t=' + Date.now() obliga a SheetDB a ignorar su caché y traer los datos frescos de Google Sheets
+            const response = await fetch(API_URL + '?t=' + Date.now());
             const data = await response.json();
             platos = data.map(p => ({
                 id: p.ID, name: p.Nombre,
@@ -396,8 +401,7 @@
             renderWeekViews(); 
         } catch (error) {
             console.error("Error cargando platos:", error);
-            document.getElementById('header-subtitle').textContent = 'Error de conexión. Revisa tu internet.';
-            // Renderizamos igual para que la UI no se quede congelada
+            document.getElementById('header-subtitle').textContent = 'Error de conexión. Toca 🔄 para reintentar.';
             renderGrid();
             renderWeekViews();
         }
@@ -605,16 +609,27 @@
         const link = document.getElementById('inp-link').value.trim();
         if (!name) { alert('⚠️ Escribe un nombre para el plato'); return; }
         if (!rawInsumos.trim()) { alert('⚠️ Pega la lista de insumos'); return; }
+        
         const insumosList = rawInsumos.split('\n').map(line => line.replace(/^[\s]*[\d\.\-\*\•\)]+[\s]*/, '').trim()).filter(line => line.length > 2);
         const newId = Date.now().toString();
         const nuevoPlato = { ID: newId, Nombre: name, Imagen: currentImageBase64, Insumos: JSON.stringify(insumosList), Receta: recipe, Link: link };
+        
         const btn = document.getElementById('btn-save-action');
         const originalText = btn.textContent; btn.textContent = '⏳ Guardando...'; btn.disabled = true;
+        
         try {
-            await fetch(API_URL, { method: 'POST', headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify({ data: nuevoPlato }) });
+            const response = await fetch(API_URL, { method: 'POST', headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify({ data: nuevoPlato }) });
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Error ${response.status}: ${errorText}`);
+            }
+            
             platos.push({ id: newId, name: name, img: currentImageBase64, insumos: insumosList, recipe: recipe, link: link });
             renderGrid(); closeModal(); alert(`✅ "${name}" guardado en la NUBE!`);
-        } catch (error) { alert('❌ Error al guardar.'); } 
+        } catch (error) { 
+            alert('❌ Error al guardar. Motivo: ' + error.message); 
+        } 
         finally { btn.textContent = originalText; btn.disabled = false; }
     }
 
@@ -630,7 +645,9 @@
         const btn = document.getElementById('btn-save-action');
         const originalText = btn.textContent; btn.textContent = '⏳ Actualizando...'; btn.disabled = true;
         try {
-            await fetch(`${API_URL}/ID/${id}`, { method: 'PUT', headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify({ data: platoActualizado }) });
+            const response = await fetch(`${API_URL}/ID/${id}`, { method: 'PUT', headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify({ data: platoActualizado }) });
+            if (!response.ok) throw new Error('Error en la actualización');
+            
             const index = platos.findIndex(p => p.id == id);
             if (index !== -1) platos[index] = { id: id, name: name, img: currentImageBase64, insumos: insumosList, recipe: recipe, link: link };
             renderGrid(); renderWeekViews(); closeModal(); alert(`✅ "${name}" actualizado en la NUBE!`);
