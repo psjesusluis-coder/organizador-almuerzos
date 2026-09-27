@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Organizador de Almuerzos - Sincronizado</title>
+    <style>
+        /* =========================================
+           ESTILOS GLOBALES Y PALETA DE COLORES
+           ========================================= */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+        body { background: #e8e4d9; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+        
+        .phone-frame {
+            width: 375px; height: 800px; background: #FAF8F3; border-radius: 40px; 
+            overflow: hidden; box-shadow: 0 25px 60px rgba(0,0,0,0.3); position: relative;
+            display: flex; flex-direction: column; border: 8px solid #fff;
+        }
+
+        .header { background: #6B8E23; color: white; padding: 30px 20px 20px; text-align: center; position: relative; z-index: 5; }
+        .header h1 { font-size: 20px; font-weight: 800; letter-spacing: 0.5px; }
+        .header p { font-size: 12px; opacity: 0.9; margin-top: 4px; font-style: italic; }
+        .add-btn-header {
+            position: absolute; top: 25px; right: 20px; background: white; color: #6B8E23;
+            width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center;
+            justify-content: center; font-size: 24px; cursor: pointer; border: none; font-weight: bold;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15); transition: transform 0.2s;
+        }
+        .add-btn-header:active { transform: scale(0.9); }
+
+        .content { flex: 1; overflow-y: auto; padding: 20px; padding-bottom: 90px; scrollbar-width: thin; }
+        .tab { display: none; animation: slideUp 0.3s ease-out; }
+        .tab.active { display: block; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+
+        .nav-bar {
+            position: absolute; bottom: 0; left: 0; right: 0; background: white;
+            display: flex; justify-content: space-around; padding: 12px 0 25px;
+            border-top: 1px solid #eee; box-shadow: 0 -4px 20px rgba(0,0,0,0.06); z-index: 10;
+        }
+        .nav-item { display: flex; flex-direction: column; align-items: center; cursor: pointer; font-size: 10px; color: #aaa; transition: all 0.2s; width: 20%; }
+        .nav-item.active { color: #6B8E23; font-weight: 700; }
+        .nav-item .icon { font-size: 22px; margin-bottom: 4px; }
+
+        .section-title { font-size: 18px; font-weight: 700; color: #2C2C2C; margin-bottom: 15px; font-style: italic; }
+        .platos-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        .plato-card { background: white; border-radius: 14px; overflow: hidden; box-shadow: 0 3px 10px rgba(0,0,0,0.06); cursor: pointer; transition: transform 0.2s; }
+        .plato-card:hover { transform: translateY(-3px); }
+        .plato-card img { width: 100%; height: 90px; object-fit: cover; background: #f0f0f0; }
+        .plato-card .name { padding: 10px 5px; font-size: 11px; text-align: center; color: #2C2C2C; font-weight: 600; line-height: 1.3; min-height: 45px; display: flex; align-items: center; justify-content: center; }
+        .plato-card.add-card { background: #F5F0E1; display: flex; align-items: center; justify-content: center; height: 140px; border: 2px dashed #6B8E23; }
+        .plato-card.add-card .plus { font-size: 40px; color: #E67E22; font-weight: 300; }
+
+        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 100; justify-content: center; align-items: center; backdrop-filter: blur(3px); }
+        .modal.active { display: flex; }
+        .modal-content { 
+            background: #FAF8F3; border-radius: 24px; padding: 25px; width: 92%; max-height: 85vh; 
+            overflow-y: auto; position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.3); 
+        }
+        .close-modal { position: absolute; top: 15px; right: 15px; font-size: 26px; cursor: pointer; color: #888; background: none; border: none; line-height: 1; }
+        
+        .form-group { margin-bottom: 20px; }
+        .form-label { display: block; font-size: 11px; font-weight: 800; color: #6B8E23; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+        
+        .form-input, .form-textarea {
+            width: 100%; padding: 14px; border: 1px solid #ddd; border-radius: 12px;
+            font-size: 14px; font-family: inherit; background: white; outline: none; transition: all 0.2s;
+        }
+        .form-input:focus, .form-textarea:focus { border-color: #6B8E23; box-shadow: 0 0 0 3px rgba(107, 142, 35, 0.1); }
+        .form-textarea { min-height: 90px; resize: vertical; line-height: 1.6; }
+
+        .insumos-area {
+            width: 100%; min-height: 120px; border: 1px solid #ddd; border-radius: 12px;
+            padding: 12px; font-size: 14px; font-family: inherit; background: white; 
+            outline: none; resize: vertical; line-height: 1.5; color: #333;
+        }
+        .insumos-area:focus { border-color: #6B8E23; box-shadow: 0 0 0 3px rgba(107, 142, 35, 0.1); }
+        .insumos-hint { font-size: 10px; color: #888; margin-top: 5px; line-height: 1.4; }
+
+        .btn-save { width: 100%; padding: 16px; background: #E67E22; color: white; border: none; border-radius: 30px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 15px; box-shadow: 0 4px 15px rgba(230, 126, 34, 0.3); }
+        .btn-save:active { transform: scale(0.97); }
+
+        .detail-hero { width: 100%; height: 190px; object-fit: cover; border-radius: 16px; margin-bottom: 20px; background: #eee; }
+        .detail-section { margin-bottom: 25px; }
+        .detail-section h3 { color: #6B8E23; font-size: 12px; text-transform: uppercase; margin-bottom: 10px; font-weight: 800; letter-spacing: 0.5px; border-bottom: 2px solid #E8F0E0; padding-bottom: 5px; }
+        .detail-list { list-style: none; padding: 0; }
+        .detail-list li { padding: 6px 0; font-size: 14px; color: #444; border-bottom: 1px solid #f5f5f5; display: flex; align-items: center; }
+        .detail-list li:before { content: "•"; color: #6B8E23; font-weight: bold; margin-right: 10px; }
+        .detail-text { font-size: 14px; color: #444; line-height: 1.7; white-space: pre-line; }
+        .detail-link { color: #E67E22; font-size: 13px; word-break: break-all; text-decoration: none; font-weight: 600; }
+
+        .week-selector { display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 20px; font-size: 14px; font-weight: 600; color: #2C2C2C; }
+        .week-selector .arrow { cursor: pointer; font-size: 20px; color: #6B8E23; padding: 5px; }
+        
+        .days-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
+        
+        .day-block { 
+            background: #4A7023; border-radius: 12px; padding: 15px; min-height: 100px;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; 
+            text-align: center; color: white; position: relative; cursor: pointer;
+            transition: transform 0.2s; box-shadow: 0 4px 10px rgba(74, 112, 35, 0.2);
+        }
+        .day-block:active { transform: scale(0.98); }
+        .day-block .day-name { font-size: 14px; font-weight: 700; text-transform: capitalize; margin-bottom: 5px; }
+        .day-block .status-icon { font-size: 24px; opacity: 0.8; }
+        .day-block.filled { background: #5C8A2E; border: 2px solid #8FBC55; }
+        .day-block.filled img { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 2px solid white; margin-bottom: 8px; }
+        .day-block.filled .plato-name { font-size: 12px; font-weight: 600; margin-bottom: 8px; line-height: 1.2; }
+        .day-block.filled .actions { display: flex; gap: 5px; }
+        .day-block.filled .actions button { 
+            background: rgba(255,255,255,0.2); border: none; color: white; 
+            padding: 4px 8px; border-radius: 10px; font-size: 9px; cursor: pointer; 
+        }
+
+        .week-actions { display: flex; gap: 10px; margin-top: 10px; }
+        .btn-outline { flex: 1; padding: 14px; background: white; color: #6B8E23; border: 2px solid #6B8E23; border-radius: 25px; font-size: 13px; font-weight: 700; cursor: pointer; }
+        .btn-solid { flex: 1; padding: 14px; background: #E67E22; color: white; border: none; border-radius: 25px; font-size: 13px; font-weight: 700; cursor: pointer; }
+
+        .menu-grid-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .menu-card { 
+            background: white; border: 1px solid #E0E8D5; border-radius: 12px; padding: 15px; 
+            box-shadow: 0 2px 6px rgba(0,0,0,0.03); display: flex; flex-direction: column; gap: 8px; height: 100%;
+        }
+        .menu-card-header { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid #f5f5f5; padding-bottom: 6px; }
+        .menu-card-day { font-size: 16px; font-weight: 800; color: #2C2C2C; }
+        .menu-card-date { font-size: 13px; color: #888; font-weight: 600; }
+        .menu-card-body { display: flex; align-items: center; gap: 10px; min-height: 24px; flex: 1; }
+        .menu-card-plato { font-size: 15px; font-weight: 700; color: #4A7023; line-height: 1.3; }
+        .menu-card-empty { font-size: 13px; color: #aaa; font-style: italic; }
+        .menu-card-actions { display: flex; gap: 8px; margin-top: 2px; }
+        .menu-card-actions button { 
+            flex: 1; padding: 6px; border: 1px solid #6B8E23; background: white; 
+            color: #6B8E23; border-radius: 16px; font-size: 11px; font-weight: 600; cursor: pointer; 
+        }
+        .menu-card-actions button:hover { background: #f9fdf5; }
+
+        .insumos-category { background: white; border-radius: 12px; padding: 15px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .insumos-category h3 { color: #6B8E23; font-size: 13px; font-weight: 800; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #E8F0E0; padding-bottom: 5px; }
+        .insumo-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f5f5f5; font-size: 14px; color: #2C2C2C; }
+        .insumo-item:last-child { border-bottom: none; }
+        .insumo-item input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: #6B8E23; }
+        .insumo-item.checked span { text-decoration: line-through; color: #aaa; }
+        .insumos-summary { background: #F5F0E1; border-radius: 12px; padding: 15px; margin-top: 15px; text-align: center; }
+        .insumos-summary p { font-size: 13px; color: #4A7023; font-weight: 600; margin: 5px 0; }
+        
+        .export-buttons { display: flex; gap: 10px; margin-top: 20px; }
+        .btn-export { flex: 1; padding: 12px; border: none; border-radius: 20px; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; }
+        .btn-pdf { background: #c0392b; color: white; }
+        .btn-word { background: #2980b9; color: white; }
+
+        .plato-selector-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 15px; }
+        .plato-selector-item { border: 2px solid #eee; border-radius: 12px; padding: 8px; cursor: pointer; text-align: center; transition: all 0.2s; background: white; }
+        .plato-selector-item:hover { border-color: #6B8E23; background: #f9fdf5; }
+        .plato-selector-item img { width: 100%; height: 60px; object-fit: cover; border-radius: 8px; margin-bottom: 5px; }
+        .plato-selector-item .name { font-size: 11px; font-weight: 600; color: #2C2C2C; }
+
+        .photo-upload { width: 100%; height: 110px; border: 2px dashed #ccc; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; color: #888; font-size: 13px; margin-bottom: 20px; background: white; }
+    </style>
+</head>
+<body>
+
+<div class="phone-frame">
+    <div class="header">
+        <h1 id="header-title">MIS PLATOS</h1>
+        <p id="header-subtitle">Cargando desde la nube...</p>
+        <button class="add-btn-header" id="add-btn" onclick="openModal()">+</button>
+    </div>
+
+    <div class="content">
+        <div class="tab active" id="tab-platos">
+            <h2 class="section-title">Platos Agregados</h2>
+            <div class="platos-grid" id="platos-grid"></div>
+        </div>
+
+        <div class="tab" id="tab-receta">
+            <img src="" class="detail-hero" id="detail-img">
+            <h2 style="font-size:22px; color:#2C2C2C; margin-bottom:20px; font-weight:700;" id="detail-name"></h2>
+            <div class="detail-section"><h3>🧾 Cuadro de Insumos</h3><ul class="detail-list" id="detail-insumos"></ul></div>
+            <div class="detail-section"><h3> Preparación</h3><div class="detail-text" id="detail-recipe"></div></div>
+            <div class="detail-section" id="detail-link-container"><h3>🔗 Link Original</h3><a id="detail-link" href="#" target="_blank" class="detail-link"></a></div>
+        </div>
+
+        <div class="tab" id="tab-seleccionar">
+            <div class="week-selector"><span class="arrow">◀</span><span>Semana: 21-27 Septiembre 2026</span><span class="arrow">▶</span></div>
+            <div class="days-grid" id="days-grid"></div>
+            <div class="week-actions">
+                <button class="btn-outline" onclick="switchTab('menu', document.querySelectorAll('.nav-item')[3])">Ver menú semanal</button>
+                <button class="btn-solid" onclick="alert('✅ Menú guardado exitosamente')">Guardar</button>
+            </div>
+        </div>
+
+        <div class="tab" id="tab-menu">
+            <div class="week-selector"><span class="arrow">◀</span><span>Sep 21-27</span><span class="arrow">▶</span></div>
+            <div class="menu-grid-container" id="menu-list"></div>
+        </div>
+
+        <div class="tab" id="tab-insumos">
+            <div class="week-selector" style="margin-bottom: 15px;"><span>📅 Semana: 21-27 Septiembre 2026</span></div>
+            <div id="printable-insumos">
+                <div id="insumos-container"></div>
+                <div class="insumos-summary" id="insumos-summary"></div>
+            </div>
+            <div class="export-buttons">
+                <button class="btn-export btn-pdf" onclick="exportPDF()"> Descargar PDF</button>
+                <button class="btn-export btn-word" onclick="exportWord()"> Descargar Word</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="nav-bar">
+        <div class="nav-item active" onclick="switchTab('platos', this)"><span class="icon">📋</span><span>Platos</span></div>
+        <div class="nav-item" onclick="switchTab('receta', this)"><span class="icon">📖</span><span>Receta</span></div>
+        <div class="nav-item" onclick="switchTab('seleccionar', this)"><span class="icon">🥣</span><span>Lista</span></div>
+        <div class="nav-item" onclick="switchTab('menu', this)"><span class="icon">📅</span><span>Menú</span></div>
+        <div class="nav-item" onclick="switchTab('insumos', this)"><span class="icon">🛒</span><span>Insumos</span></div>
+    </div>
+</div>
+
+<div class="modal" id="add-modal">
+    <div class="modal-content">
+        <button class="close-modal" onclick="closeModal()">×</button>
+        <h2 style="color:#6B8E23; margin-bottom:20px; font-size:20px; font-weight:700;">Nuevo Plato</h2>
+        <div class="photo-upload" onclick="alert('Función de cámara/galería')"><span style="font-size:28px; margin-bottom:5px;"></span><span>Toca para subir foto del plato</span></div>
+        <div class="form-group"><label class="form-label">Nombre del plato</label><input type="text" class="form-input" id="inp-name" placeholder="Ej: Escabeche de Pollo"></div>
+        <div class="form-group"><label class="form-label">1. Cuadro de Insumos (Pega tu lista aquí)</label><textarea class="insumos-area" id="inp-insumos" placeholder="Pega aquí tu lista de ingredientes..."></textarea><p class="insumos-hint">*Pega la lista tal cual. El sistema reconocerá cada línea automáticamente.</p></div>
+        <div class="form-group"><label class="form-label">2. Receta / Preparación</label><textarea class="form-textarea" id="inp-recipe" placeholder="Pega aquí los pasos de preparación..."></textarea></div>
+        <div class="form-group"><label class="form-label">3. Pegar Link</label><input type="url" class="form-input" id="inp-link" placeholder="https://..."></div>
+        <button class="btn-save" onclick="saveNewPlato()">💾 GUARDAR EN LA NUBE</button>
+    </div>
+</div>
+
+<div class="modal" id="select-plato-modal">
+    <div class="modal-content">
+        <button class="close-modal" onclick="closeModal('select-plato-modal')">×</button>
+        <h2 style="color:#6B8E23; margin-bottom:15px; font-size:18px;">Seleccionar para <span id="selected-day-name"></span></h2>
+        <div class="plato-selector-grid" id="plato-selector-grid"></div>
+    </div>
+</div>
+
+<script>
+    // =========================================
+    // CONFIGURACIÓN DE LA NUBE (SHEETDB)
+    // =========================================
+    // ⚠️ IMPORTANTE: Reemplaza la URL de abajo con la tuya de SheetDB
+    const API_URL = 'https://sheetdb.io/api/v1/dws3xpobma4f2'; 
+
+    let platos = [];
+    const diasSemana = ['Lunes 21', 'Martes 22', 'Miércoles 23', 'Jueves 24', 'Viernes 25', 'Sábado 26', 'Domingo 27'];
+    let menuSemanal = [null, null, null, null, null, null, null]; 
+
+    // =========================================
+    // CARGAR DATOS DESDE LA NUBE AL INICIAR
+    // =========================================
+    async function loadPlatosFromCloud() {
+        try {
+            document.getElementById('header-subtitle').textContent = 'Conectando con la nube...';
+            const response = await fetch(API_URL);
+            const data = await response.json();
+            
+            platos = data.map(p => ({
+                id: p.ID,
+                name: p.Nombre,
+                img: p.Imagen || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300",
+                insumos: JSON.parse(p.Insumos || '[]'),
+                recipe: p.Receta,
+                link: p.Link
+            }));
+
+            document.getElementById('header-subtitle').textContent = 'Tu base de datos de comidas';
+            renderGrid();
+            renderDays();
+            renderMenu();
+        } catch (error) {
+            console.error("Error cargando platos:", error);
+            document.getElementById('header-subtitle').textContent = 'Error de conexión. Revisa tu internet.';
+        }
+    }
+
+    // =========================================
+    // FUNCIONES DE RENDERIZADO
+    // =========================================
+    function renderGrid() {
+        const grid = document.getElementById('platos-grid');
+        grid.innerHTML = '';
+        platos.forEach(p => {
+            grid.innerHTML += `<div class="plato-card" onclick="viewDetail('${p.id}')"><img src="${p.img}" alt="${p.name}" loading="lazy"><div class="name">${p.name}</div></div>`;
+        });
+        grid.innerHTML += `<div class="plato-card add-card" onclick="openModal()"><span class="plus">+</span></div>`;
+    }
+
+    function renderDays() {
+        const container = document.getElementById('days-grid');
+        container.innerHTML = '';
+        diasSemana.forEach((dia, index) => {
+            const platoIndex = menuSemanal[index];
+            if (platoIndex !== null && platos[platoIndex]) {
+                const p = platos[platoIndex];
+                container.innerHTML += `<div class="day-block filled" onclick="openSelectModal(${index})"><img src="${p.img}" alt="${p.name}"><div class="plato-name">${p.name}</div><div class="actions"><button onclick="event.stopPropagation(); openSelectModal(${index})">Cambiar</button><button onclick="event.stopPropagation(); viewDetail('${p.id}')">Ver receta</button></div></div>`;
+            } else {
+                container.innerHTML += `<div class="day-block empty" onclick="openSelectModal(${index})"><div class="day-name">${dia}</div><div class="status-icon">+</div></div>`;
+            }
+        });
+    }
+
+    function renderMenu() {
+        const container = document.getElementById('menu-list');
+        container.innerHTML = '';
+        diasSemana.forEach((dia, index) => {
+            const parts = dia.split(' ');
+            const dayName = parts[0];
+            const dayNum = parts[1];
+            const platoIndex = menuSemanal[index];
+            if (platoIndex !== null && platos[platoIndex]) {
+                const p = platos[platoIndex];
+                container.innerHTML += `<div class="menu-card"><div class="menu-card-header"><span class="menu-card-day">${dayName}</span><span class="menu-card-date">${dayNum}</span></div><div class="menu-card-body"><div class="menu-card-plato">${p.name}</div></div><div class="menu-card-actions"><button onclick="openSelectModal(${index})">Cambiar</button><button onclick="viewDetail('${p.id}')">Ver receta</button></div></div>`;
+            } else {
+                container.innerHTML += `<div class="menu-card" style="opacity: 0.7;"><div class="menu-card-header"><span class="menu-card-day">${dayName}</span><span class="menu-card-date">${dayNum}</span></div><div class="menu-card-body"><div class="menu-card-empty">Sin plato asignado</div></div><div class="menu-card-actions"><button onclick="openSelectModal(${index})" style="border-color:#ccc; color:#888;">Asignar plato</button></div></div>`;
+            }
+        });
+    }
+
+    function renderInsumos() {
+        const container = document.getElementById('insumos-container');
+        const summaryContainer = document.getElementById('insumos-summary');
+        container.innerHTML = '';
+        let allInsumos = new Set();
+        let totalPlatos = 0;
+        menuSemanal.forEach(idx => {
+            if (idx !== null && platos[idx]) {
+                totalPlatos++;
+                platos[idx].insumos.forEach(ins => allInsumos.add(ins.toLowerCase()));
+            }
+        });
+        if (totalPlatos === 0) { container.innerHTML = '<p style="text-align:center; color:#888; margin-top:40px;">Aún no has asignado platos a la semana.</p>'; summaryContainer.innerHTML = ''; return; }
+        const categorias = { '🥩 PROTEÍNAS': ['pollo', 'carne', 'res', 'cerdo', 'pescado', 'salmón', 'atún', 'huevo', 'huevos', 'mariscos'], ' VERDURAS Y FRUTAS': ['cebolla', 'ajo', 'tomate', 'lechuga', 'zanahoria', 'papa', 'camote', 'limón', 'culantro', 'cilantro', 'ají', 'perejil', 'romero', 'laurel', 'verdura', 'fruta'], '🌾 GRANOS Y DESPENSA': ['arroz', 'pasta', 'fideo', 'pan', 'harina', 'azúcar', 'sal', 'pimienta', 'comino', 'páprika', 'aceite', 'vinagre', 'caldo', 'salsa', 'conserva'] };
+        let categorized = {}; Object.keys(categorias).forEach(cat => categorized[cat] = []); let otros = [];
+        allInsumos.forEach(ins => { let placed = false; for (let cat in categorias) { if (categorias[cat].some(keyword => ins.includes(keyword))) { categorized[cat].push(ins); placed = true; break; } } if (!placed) otros.push(ins); });
+        if (otros.length > 0) categorized['📦 OTROS'] = otros;
+        let totalCount = 0;
+        for (let cat in categorized) { if (categorized[cat].length === 0) continue; totalCount += categorized[cat].length; let itemsHtml = categorized[cat].map(item => `<div class="insumo-item"><input type="checkbox" onchange="this.parentElement.classList.toggle('checked', this.checked)"><span>${item.charAt(0).toUpperCase() + item.slice(1)}</span></div>`).join(''); container.innerHTML += `<div class="insumos-category"><h3>${cat}</h3>${itemsHtml}</div>`; }
+        summaryContainer.innerHTML = `<p>️ ${totalPlatos} platos seleccionados</p><p>🛒 ${totalCount} insumos únicos necesarios</p><p style="font-size:11px; color:#888; margin-top:5px;">Las medidas las ajustas tú según la cantidad a cocinar.</p>`;
+    }
+
+    function exportPDF() { window.print(); }
+    function exportWord() { const content = document.getElementById('printable-insumos').innerHTML; const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Lista de Insumos</title></head><body>"; const footer = "</body></html>"; const sourceHTML = header + content + footer; const blob = new Blob(['\ufeff', sourceHTML], { type: 'application/msword' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = 'lista-insumos-semanal.doc'; document.body.appendChild(link); link.click(); document.body.removeChild(link); }
+
+    function switchTab(tabId, el) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById('tab-' + tabId).classList.add('active');
+        if(el) el.classList.add('active');
+        const titles = { 'platos': ['MIS PLATOS', 'Tu base de datos'], 'receta': ['DETALLE DE RECETA', 'Información completa'], 'seleccionar': ['SELECCIONAR PLATOS', 'Arma tu menú semanal'], 'menu': ['MENÚ SEMANAL', 'Resumen de la semana'], 'insumos': ['INSUMOS NECESARIOS', 'Lista de compras'] };
+        document.getElementById('header-title').textContent = titles[tabId][0];
+        document.getElementById('header-subtitle').textContent = titles[tabId][1];
+        document.getElementById('add-btn').style.display = tabId === 'platos' ? 'flex' : 'none';
+        if(tabId === 'menu') renderMenu(); if(tabId === 'seleccionar') renderDays(); if(tabId === 'insumos') renderInsumos();
+    }
+
+    function viewDetail(id) {
+        const p = platos.find(x => x.id == id);
+        if(!p) return;
+        document.getElementById('detail-img').src = p.img;
+        document.getElementById('detail-name').textContent = p.name;
+        document.getElementById('detail-recipe').textContent = p.recipe || "Sin receta registrada.";
+        const ul = document.getElementById('detail-insumos'); ul.innerHTML = p.insumos.map(i => `<li>${i}</li>`).join('');
+        const linkEl = document.getElementById('detail-link'); const linkCont = document.getElementById('detail-link-container');
+        if(p.link && p.link.startsWith('http')) { linkEl.href = p.link; linkEl.textContent = p.link; linkCont.style.display = 'block'; } else { linkCont.style.display = 'none'; }
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById('tab-receta').classList.add('active');
+        document.querySelectorAll('.nav-item')[1].classList.add('active');
+        document.getElementById('header-title').textContent = 'DETALLE DE RECETA';
+        document.getElementById('header-subtitle').textContent = p.name;
+        document.getElementById('add-btn').style.display = 'none';
+    }
+
+    function openModal() { document.getElementById('add-modal').classList.add('active'); resetForm(); }
+    function closeModal(id) { document.getElementById(id || 'add-modal').classList.remove('active'); }
+    
+    function openSelectModal(dayIndex) {
+        document.getElementById('selected-day-name').textContent = diasSemana[dayIndex];
+        const grid = document.getElementById('plato-selector-grid'); grid.innerHTML = '';
+        platos.forEach(p => { grid.innerHTML += `<div class="plato-selector-item" onclick="assignPlato(${dayIndex}, '${p.id}')"><img src="${p.img}" alt="${p.name}"><div class="name">${p.name}</div></div>`; });
+        document.getElementById('select-plato-modal').classList.add('active');
+    }
+
+    function assignPlato(dayIndex, platoId) {
+        const idx = platos.findIndex(p => p.id == platoId);
+        menuSemanal[dayIndex] = idx; renderDays(); renderMenu(); closeModal('select-plato-modal');
+    }
+
+    // =========================================
+    // GUARDAR NUEVO PLATO EN LA NUBE
+    // =========================================
+    async function saveNewPlato() {
+        const name = document.getElementById('inp-name').value.trim();
+        const rawInsumos = document.getElementById('inp-insumos').value;
+        const recipe = document.getElementById('inp-recipe').value.trim();
+        const link = document.getElementById('inp-link').value.trim();
+
+        if (!name) { alert('⚠️ Escribe un nombre para el plato'); return; }
+        if (!rawInsumos.trim()) { alert('⚠️ Pega la lista de insumos'); return; }
+
+        const insumosList = rawInsumos.split('\n').map(line => line.replace(/^[\s]*[\d\.\-\*\•\)]+[\s]*/, '').trim()).filter(line => line.length > 2);
+
+        const nuevoPlato = {
+            ID: Date.now().toString(),
+            Nombre: name,
+            Imagen: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300",
+            Insumos: JSON.stringify(insumosList),
+            Receta: recipe,
+            Link: link
+        };
+
+        const btn = document.querySelector('.btn-save');
+        const originalText = btn.textContent;
+        btn.textContent = '☁️ Guardando en la nube...';
+        btn.disabled = true;
+
+        try {
+            await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+                body: JSON.stringify({ data: nuevoPlato })
+            });
+            
+            platos.push({
+                id: nuevoPlato.ID, name: nuevoPlato.Nombre, img: nuevoPlato.Imagen,
+                insumos: insumosList, recipe: nuevoPlato.Receta, link: nuevoPlato.Link
+            });
+
+            renderGrid(); closeModal();
+            alert(`✅ "${name}" guardado en la NUBE y sincronizado!`);
+        } catch (error) {
+            alert('❌ Error al guardar. Revisa tu conexión a internet.');
+        } finally {
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
+    }
+
+    function resetForm() {
+        document.getElementById('inp-name').value = '';
+        document.getElementById('inp-insumos').value = '';
+        document.getElementById('inp-recipe').value = '';
+        document.getElementById('inp-link').value = '';
+    }
+
+    // INICIALIZACIÓN: Cargar desde la nube en lugar de datos locales
+    loadPlatosFromCloud();
+</script>
+
+</body>
+</html>
