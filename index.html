@@ -5,9 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Organizador de Almuerzos - Sincronizado</title>
     <style>
-        /* =========================================
-           ESTILOS GLOBALES Y PALETA DE COLORES
-           ========================================= */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
         body { background: #e8e4d9; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
         
@@ -44,12 +41,30 @@
 
         .section-title { font-size: 18px; font-weight: 700; color: #2C2C2C; margin-bottom: 15px; font-style: italic; }
         .platos-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-        .plato-card { background: white; border-radius: 14px; overflow: hidden; box-shadow: 0 3px 10px rgba(0,0,0,0.06); cursor: pointer; transition: transform 0.2s; }
+        
+        /* TARJETA DE PLATO CON BOTONES DE ACCIÓN */
+        .plato-card { 
+            background: white; border-radius: 14px; overflow: hidden; 
+            box-shadow: 0 3px 10px rgba(0,0,0,0.06); cursor: pointer; transition: transform 0.2s; 
+            position: relative;
+        }
         .plato-card:hover { transform: translateY(-3px); }
         .plato-card img { width: 100%; height: 90px; object-fit: cover; background: #f0f0f0; }
         .plato-card .name { padding: 10px 5px; font-size: 11px; text-align: center; color: #2C2C2C; font-weight: 600; line-height: 1.3; min-height: 45px; display: flex; align-items: center; justify-content: center; }
         .plato-card.add-card { background: #F5F0E1; display: flex; align-items: center; justify-content: center; height: 140px; border: 2px dashed #6B8E23; }
         .plato-card.add-card .plus { font-size: 40px; color: #E67E22; font-weight: 300; }
+        
+        /* Botones de Editar y Eliminar en la tarjeta */
+        .card-actions {
+            position: absolute; top: 5px; right: 5px; display: flex; gap: 4px;
+        }
+        .card-actions button {
+            width: 24px; height: 24px; border-radius: 50%; border: none; 
+            display: flex; align-items: center; justify-content: center; 
+            font-size: 12px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .btn-edit-card { background: #f39c12; color: white; }
+        .btn-delete-card { background: #e74c3c; color: white; }
 
         .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 100; justify-content: center; align-items: center; backdrop-filter: blur(3px); }
         .modal.active { display: flex; }
@@ -79,6 +94,7 @@
 
         .btn-save { width: 100%; padding: 16px; background: #E67E22; color: white; border: none; border-radius: 30px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 15px; box-shadow: 0 4px 15px rgba(230, 126, 34, 0.3); }
         .btn-save:active { transform: scale(0.97); }
+        .btn-save:disabled { background: #ccc; cursor: not-allowed; }
 
         .detail-hero { width: 100%; height: 190px; object-fit: cover; border-radius: 16px; margin-bottom: 20px; background: #eee; }
         .detail-section { margin-bottom: 25px; }
@@ -93,7 +109,6 @@
         .week-selector .arrow { cursor: pointer; font-size: 20px; color: #6B8E23; padding: 5px; }
         
         .days-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
-        
         .day-block { 
             background: #4A7023; border-radius: 12px; padding: 15px; min-height: 100px;
             display: flex; flex-direction: column; justify-content: center; align-items: center; 
@@ -132,7 +147,6 @@
             flex: 1; padding: 6px; border: 1px solid #6B8E23; background: white; 
             color: #6B8E23; border-radius: 16px; font-size: 11px; font-weight: 600; cursor: pointer; 
         }
-        .menu-card-actions button:hover { background: #f9fdf5; }
 
         .insumos-category { background: white; border-radius: 12px; padding: 15px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .insumos-category h3 { color: #6B8E23; font-size: 13px; font-weight: 800; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #E8F0E0; padding-bottom: 5px; }
@@ -154,7 +168,13 @@
         .plato-selector-item img { width: 100%; height: 60px; object-fit: cover; border-radius: 8px; margin-bottom: 5px; }
         .plato-selector-item .name { font-size: 11px; font-weight: 600; color: #2C2C2C; }
 
-        .photo-upload { width: 100%; height: 110px; border: 2px dashed #ccc; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; color: #888; font-size: 13px; margin-bottom: 20px; background: white; }
+        .photo-upload { 
+            width: 100%; height: 110px; border: 2px dashed #ccc; border-radius: 14px; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            cursor: pointer; color: #888; font-size: 13px; margin-bottom: 20px; background: white; 
+            position: relative; overflow: hidden; transition: border 0.2s;
+        }
+        .photo-upload:hover { border-color: #6B8E23; }
     </style>
 </head>
 <body>
@@ -185,7 +205,7 @@
             <div class="days-grid" id="days-grid"></div>
             <div class="week-actions">
                 <button class="btn-outline" onclick="switchTab('menu', document.querySelectorAll('.nav-item')[3])">Ver menú semanal</button>
-                <button class="btn-solid" onclick="alert('✅ Menú guardado exitosamente')">Guardar</button>
+                <button class="btn-solid" onclick="saveMenuToCloud()">💾 Guardar Menú</button>
             </div>
         </div>
 
@@ -201,17 +221,17 @@
                 <div class="insumos-summary" id="insumos-summary"></div>
             </div>
             <div class="export-buttons">
-                <button class="btn-export btn-pdf" onclick="exportPDF()"> Descargar PDF</button>
-                <button class="btn-export btn-word" onclick="exportWord()"> Descargar Word</button>
+                <button class="btn-export btn-pdf" onclick="exportPDF()">📄 Descargar PDF</button>
+                <button class="btn-export btn-word" onclick="exportWord()">📝 Descargar Word</button>
             </div>
         </div>
     </div>
 
     <div class="nav-bar">
-        <div class="nav-item active" onclick="switchTab('platos', this)"><span class="icon">📋</span><span>Platos</span></div>
+        <div class="nav-item active" onclick="switchTab('platos', this)"><span class="icon"></span><span>Platos</span></div>
         <div class="nav-item" onclick="switchTab('receta', this)"><span class="icon">📖</span><span>Receta</span></div>
         <div class="nav-item" onclick="switchTab('seleccionar', this)"><span class="icon">🥣</span><span>Lista</span></div>
-        <div class="nav-item" onclick="switchTab('menu', this)"><span class="icon">📅</span><span>Menú</span></div>
+        <div class="nav-item" onclick="switchTab('menu', this)"><span class="icon"></span><span>Menú</span></div>
         <div class="nav-item" onclick="switchTab('insumos', this)"><span class="icon">🛒</span><span>Insumos</span></div>
     </div>
 </div>
@@ -219,13 +239,21 @@
 <div class="modal" id="add-modal">
     <div class="modal-content">
         <button class="close-modal" onclick="closeModal()">×</button>
-        <h2 style="color:#6B8E23; margin-bottom:20px; font-size:20px; font-weight:700;">Nuevo Plato</h2>
-        <div class="photo-upload" onclick="alert('Función de cámara/galería')"><span style="font-size:28px; margin-bottom:5px;"></span><span>Toca para subir foto del plato</span></div>
+        <h2 style="color:#6B8E23; margin-bottom:20px; font-size:20px; font-weight:700;" id="modal-title">Nuevo Plato</h2>
+        
+        <input type="file" id="inp-foto" accept="image/*" style="display:none;" onchange="handleImageUpload(event)">
+        
+        <div class="photo-upload" onclick="document.getElementById('inp-foto').click()">
+            <span style="font-size:28px; margin-bottom:5px;">📷</span>
+            <span id="foto-text">Toca para subir foto (Cámara/Galería)</span>
+            <img id="foto-preview" style="display:none; width:100%; height:100%; object-fit:cover; border-radius:12px; position:absolute; top:0; left:0;">
+        </div>
+
         <div class="form-group"><label class="form-label">Nombre del plato</label><input type="text" class="form-input" id="inp-name" placeholder="Ej: Escabeche de Pollo"></div>
-        <div class="form-group"><label class="form-label">1. Cuadro de Insumos (Pega tu lista aquí)</label><textarea class="insumos-area" id="inp-insumos" placeholder="Pega aquí tu lista de ingredientes..."></textarea><p class="insumos-hint">*Pega la lista tal cual. El sistema reconocerá cada línea automáticamente.</p></div>
+        <div class="form-group"><label class="form-label">1. Cuadro de Insumos (Pega tu lista aquí)</label><textarea class="insumos-area" id="inp-insumos" placeholder="Pega aquí tu lista de ingredientes..."></textarea><p class="insumos-hint">*Pega la lista tal cual. El sistema reconocerá cada línea.</p></div>
         <div class="form-group"><label class="form-label">2. Receta / Preparación</label><textarea class="form-textarea" id="inp-recipe" placeholder="Pega aquí los pasos de preparación..."></textarea></div>
         <div class="form-group"><label class="form-label">3. Pegar Link</label><input type="url" class="form-input" id="inp-link" placeholder="https://..."></div>
-        <button class="btn-save" onclick="saveNewPlato()">💾 GUARDAR EN LA NUBE</button>
+        <button class="btn-save" id="btn-save-action" onclick="handleSaveOrUpdate()">☁️ GUARDAR EN LA NUBE</button>
     </div>
 </div>
 
@@ -241,15 +269,52 @@
     // =========================================
     // CONFIGURACIÓN DE LA NUBE (SHEETDB)
     // =========================================
-    // ⚠️ IMPORTANTE: Reemplaza la URL de abajo con la tuya de SheetDB
-    const API_URL = 'https://sheetdb.io/api/v1/dws3xpobma4f2'; 
+    const API_URL = 'PEGA_AQUI_TU_URL_DE_SHEETDB'; 
 
     let platos = [];
     const diasSemana = ['Lunes 21', 'Martes 22', 'Miércoles 23', 'Jueves 24', 'Viernes 25', 'Sábado 26', 'Domingo 27'];
     let menuSemanal = [null, null, null, null, null, null, null]; 
+    let currentImageBase64 = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300";
+    let editingId = null; // Variable para saber si estamos editando o creando
 
     // =========================================
-    // CARGAR DATOS DESDE LA NUBE AL INICIAR
+    // MANEJO DE IMAGEN
+    // =========================================
+    function handleImageUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const maxWidth = 800; const maxHeight = 800;
+                let width = img.width; let height = img.height;
+
+                if (width > height) {
+                    if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; }
+                } else {
+                    if (height > maxHeight) { width *= maxHeight / height; height = maxHeight; }
+                }
+
+                canvas.width = width; canvas.height = height;
+                ctx.drawImage(img, 0, 0, width, height);
+                currentImageBase64 = canvas.toDataURL('image/jpeg', 0.6);
+
+                const preview = document.getElementById('foto-preview');
+                preview.src = currentImageBase64;
+                preview.style.display = 'block';
+                document.getElementById('foto-text').style.display = 'none';
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // =========================================
+    // CARGAR DATOS DESDE LA NUBE
     // =========================================
     async function loadPlatosFromCloud() {
         try {
@@ -267,30 +332,34 @@
             }));
 
             document.getElementById('header-subtitle').textContent = 'Tu base de datos de comidas';
-            renderGrid();
-            renderDays();
-            renderMenu();
+            renderGrid(); renderDays(); renderMenu();
         } catch (error) {
             console.error("Error cargando platos:", error);
-            document.getElementById('header-subtitle').textContent = 'Error de conexión. Revisa tu internet.';
+            document.getElementById('header-subtitle').textContent = 'Error de conexión.';
         }
     }
 
     // =========================================
-    // FUNCIONES DE RENDERIZADO
+    // RENDERIZADO (CON BOTONES EDITAR/ELIMINAR)
     // =========================================
     function renderGrid() {
-        const grid = document.getElementById('platos-grid');
-        grid.innerHTML = '';
-        platos.forEach(p => {
-            grid.innerHTML += `<div class="plato-card" onclick="viewDetail('${p.id}')"><img src="${p.img}" alt="${p.name}" loading="lazy"><div class="name">${p.name}</div></div>`;
+        const grid = document.getElementById('platos-grid'); grid.innerHTML = '';
+        platos.forEach(p => { 
+            grid.innerHTML += `
+            <div class="plato-card" onclick="viewDetail('${p.id}')">
+                <div class="card-actions">
+                    <button class="btn-edit-card" onclick="event.stopPropagation(); editPlato('${p.id}')" title="Editar">✏️</button>
+                    <button class="btn-delete-card" onclick="event.stopPropagation(); deletePlato('${p.id}')" title="Eliminar">️</button>
+                </div>
+                <img src="${p.img}" alt="${p.name}" loading="lazy">
+                <div class="name">${p.name}</div>
+            </div>`; 
         });
         grid.innerHTML += `<div class="plato-card add-card" onclick="openModal()"><span class="plus">+</span></div>`;
     }
 
     function renderDays() {
-        const container = document.getElementById('days-grid');
-        container.innerHTML = '';
+        const container = document.getElementById('days-grid'); container.innerHTML = '';
         diasSemana.forEach((dia, index) => {
             const platoIndex = menuSemanal[index];
             if (platoIndex !== null && platos[platoIndex]) {
@@ -303,12 +372,9 @@
     }
 
     function renderMenu() {
-        const container = document.getElementById('menu-list');
-        container.innerHTML = '';
+        const container = document.getElementById('menu-list'); container.innerHTML = '';
         diasSemana.forEach((dia, index) => {
-            const parts = dia.split(' ');
-            const dayName = parts[0];
-            const dayNum = parts[1];
+            const parts = dia.split(' '); const dayName = parts[0]; const dayNum = parts[1];
             const platoIndex = menuSemanal[index];
             if (platoIndex !== null && platos[platoIndex]) {
                 const p = platos[platoIndex];
@@ -320,25 +386,17 @@
     }
 
     function renderInsumos() {
-        const container = document.getElementById('insumos-container');
-        const summaryContainer = document.getElementById('insumos-summary');
-        container.innerHTML = '';
-        let allInsumos = new Set();
-        let totalPlatos = 0;
-        menuSemanal.forEach(idx => {
-            if (idx !== null && platos[idx]) {
-                totalPlatos++;
-                platos[idx].insumos.forEach(ins => allInsumos.add(ins.toLowerCase()));
-            }
-        });
+        const container = document.getElementById('insumos-container'); const summaryContainer = document.getElementById('insumos-summary'); container.innerHTML = '';
+        let allInsumos = new Set(); let totalPlatos = 0;
+        menuSemanal.forEach(idx => { if (idx !== null && platos[idx]) { totalPlatos++; platos[idx].insumos.forEach(ins => allInsumos.add(ins.toLowerCase())); } });
         if (totalPlatos === 0) { container.innerHTML = '<p style="text-align:center; color:#888; margin-top:40px;">Aún no has asignado platos a la semana.</p>'; summaryContainer.innerHTML = ''; return; }
-        const categorias = { '🥩 PROTEÍNAS': ['pollo', 'carne', 'res', 'cerdo', 'pescado', 'salmón', 'atún', 'huevo', 'huevos', 'mariscos'], ' VERDURAS Y FRUTAS': ['cebolla', 'ajo', 'tomate', 'lechuga', 'zanahoria', 'papa', 'camote', 'limón', 'culantro', 'cilantro', 'ají', 'perejil', 'romero', 'laurel', 'verdura', 'fruta'], '🌾 GRANOS Y DESPENSA': ['arroz', 'pasta', 'fideo', 'pan', 'harina', 'azúcar', 'sal', 'pimienta', 'comino', 'páprika', 'aceite', 'vinagre', 'caldo', 'salsa', 'conserva'] };
+        const categorias = { '🥩 PROTEÍNAS': ['pollo', 'carne', 'res', 'cerdo', 'pescado', 'salmón', 'atún', 'huevo', 'huevos', 'mariscos'], '🥬 VERDURAS Y FRUTAS': ['cebolla', 'ajo', 'tomate', 'lechuga', 'zanahoria', 'papa', 'camote', 'limón', 'culantro', 'cilantro', 'ají', 'perejil', 'romero', 'laurel', 'verdura', 'fruta'], '🌾 GRANOS Y DESPENSA': ['arroz', 'pasta', 'fideo', 'pan', 'harina', 'azúcar', 'sal', 'pimienta', 'comino', 'páprika', 'aceite', 'vinagre', 'caldo', 'salsa', 'conserva'] };
         let categorized = {}; Object.keys(categorias).forEach(cat => categorized[cat] = []); let otros = [];
         allInsumos.forEach(ins => { let placed = false; for (let cat in categorias) { if (categorias[cat].some(keyword => ins.includes(keyword))) { categorized[cat].push(ins); placed = true; break; } } if (!placed) otros.push(ins); });
         if (otros.length > 0) categorized['📦 OTROS'] = otros;
         let totalCount = 0;
         for (let cat in categorized) { if (categorized[cat].length === 0) continue; totalCount += categorized[cat].length; let itemsHtml = categorized[cat].map(item => `<div class="insumo-item"><input type="checkbox" onchange="this.parentElement.classList.toggle('checked', this.checked)"><span>${item.charAt(0).toUpperCase() + item.slice(1)}</span></div>`).join(''); container.innerHTML += `<div class="insumos-category"><h3>${cat}</h3>${itemsHtml}</div>`; }
-        summaryContainer.innerHTML = `<p>️ ${totalPlatos} platos seleccionados</p><p>🛒 ${totalCount} insumos únicos necesarios</p><p style="font-size:11px; color:#888; margin-top:5px;">Las medidas las ajustas tú según la cantidad a cocinar.</p>`;
+        summaryContainer.innerHTML = `<p>🍽️ ${totalPlatos} platos seleccionados</p><p>🛒 ${totalCount} insumos únicos necesarios</p>`;
     }
 
     function exportPDF() { window.print(); }
@@ -357,41 +415,88 @@
     }
 
     function viewDetail(id) {
-        const p = platos.find(x => x.id == id);
-        if(!p) return;
-        document.getElementById('detail-img').src = p.img;
-        document.getElementById('detail-name').textContent = p.name;
+        const p = platos.find(x => x.id == id); if(!p) return;
+        document.getElementById('detail-img').src = p.img; document.getElementById('detail-name').textContent = p.name;
         document.getElementById('detail-recipe').textContent = p.recipe || "Sin receta registrada.";
         const ul = document.getElementById('detail-insumos'); ul.innerHTML = p.insumos.map(i => `<li>${i}</li>`).join('');
         const linkEl = document.getElementById('detail-link'); const linkCont = document.getElementById('detail-link-container');
         if(p.link && p.link.startsWith('http')) { linkEl.href = p.link; linkEl.textContent = p.link; linkCont.style.display = 'block'; } else { linkCont.style.display = 'none'; }
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        document.getElementById('tab-receta').classList.add('active');
-        document.querySelectorAll('.nav-item')[1].classList.add('active');
-        document.getElementById('header-title').textContent = 'DETALLE DE RECETA';
-        document.getElementById('header-subtitle').textContent = p.name;
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById('tab-receta').classList.add('active'); document.querySelectorAll('.nav-item')[1].classList.add('active');
+        document.getElementById('header-title').textContent = 'DETALLE DE RECETA'; document.getElementById('header-subtitle').textContent = p.name;
         document.getElementById('add-btn').style.display = 'none';
     }
 
-    function openModal() { document.getElementById('add-modal').classList.add('active'); resetForm(); }
+    // =========================================
+    // LÓGICA DE MODAL (CREAR / EDITAR)
+    // =========================================
+    function openModal() { 
+        editingId = null;
+        document.getElementById('modal-title').textContent = 'Nuevo Plato';
+        document.getElementById('btn-save-action').textContent = '☁️ GUARDAR EN LA NUBE';
+        resetForm(); 
+        document.getElementById('add-modal').classList.add('active'); 
+    }
+
     function closeModal(id) { document.getElementById(id || 'add-modal').classList.remove('active'); }
-    
-    function openSelectModal(dayIndex) {
-        document.getElementById('selected-day-name').textContent = diasSemana[dayIndex];
-        const grid = document.getElementById('plato-selector-grid'); grid.innerHTML = '';
-        platos.forEach(p => { grid.innerHTML += `<div class="plato-selector-item" onclick="assignPlato(${dayIndex}, '${p.id}')"><img src="${p.img}" alt="${p.name}"><div class="name">${p.name}</div></div>`; });
-        document.getElementById('select-plato-modal').classList.add('active');
+
+    // FUNCIÓN PARA EDITAR
+    function editPlato(id) {
+        const p = platos.find(x => x.id == id);
+        if (!p) return;
+
+        editingId = id;
+        document.getElementById('modal-title').textContent = 'Editar Plato';
+        document.getElementById('btn-save-action').textContent = '️ ACTUALIZAR EN LA NUBE';
+        
+        // Llenar campos
+        document.getElementById('inp-name').value = p.name;
+        document.getElementById('inp-insumos').value = p.insumos.join('\n');
+        document.getElementById('inp-recipe').value = p.recipe || '';
+        document.getElementById('inp-link').value = p.link || '';
+        
+        // Mostrar imagen actual
+        currentImageBase64 = p.img;
+        const preview = document.getElementById('foto-preview');
+        preview.src = currentImageBase64;
+        preview.style.display = 'block';
+        document.getElementById('foto-text').style.display = 'none';
+        
+        document.getElementById('add-modal').classList.add('active');
     }
 
-    function assignPlato(dayIndex, platoId) {
-        const idx = platos.findIndex(p => p.id == platoId);
-        menuSemanal[dayIndex] = idx; renderDays(); renderMenu(); closeModal('select-plato-modal');
+    // FUNCIÓN PARA ELIMINAR
+    async function deletePlato(id) {
+        if (!confirm('⚠️ ¿Estás seguro de que quieres eliminar este plato de tu base de datos?')) return;
+
+        const btn = document.querySelector('.btn-save'); // Usamos un indicador visual temporal si se desea, pero aquí es directo
+        try {
+            // Eliminar en SheetDB usando la columna ID
+            await fetch(`${API_URL}/ID/${id}`, { method: 'DELETE' });
+            
+            // Eliminar localmente
+            platos = platos.filter(p => p.id != id);
+            
+            // Limpiar menú si estaba asignado
+            menuSemanal = menuSemanal.map(idx => (platos[idx] ? idx : null));
+            
+            renderGrid(); renderDays(); renderMenu();
+            alert('🗑️ Plato eliminado correctamente.');
+        } catch (error) {
+            alert('❌ Error al eliminar. Revisa tu conexión.');
+        }
     }
 
-    // =========================================
-    // GUARDAR NUEVO PLATO EN LA NUBE
-    // =========================================
+    // FUNCIÓN UNIFICADA PARA GUARDAR O ACTUALIZAR
+    async function handleSaveOrUpdate() {
+        if (editingId) {
+            await updatePlato(editingId);
+        } else {
+            await saveNewPlato();
+        }
+    }
+
+    // GUARDAR NUEVO
     async function saveNewPlato() {
         const name = document.getElementById('inp-name').value.trim();
         const rawInsumos = document.getElementById('inp-insumos').value;
@@ -402,53 +507,83 @@
         if (!rawInsumos.trim()) { alert('⚠️ Pega la lista de insumos'); return; }
 
         const insumosList = rawInsumos.split('\n').map(line => line.replace(/^[\s]*[\d\.\-\*\•\)]+[\s]*/, '').trim()).filter(line => line.length > 2);
+        const newId = Date.now().toString();
 
         const nuevoPlato = {
-            ID: Date.now().toString(),
-            Nombre: name,
-            Imagen: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300",
-            Insumos: JSON.stringify(insumosList),
-            Receta: recipe,
-            Link: link
+            ID: newId, Nombre: name, Imagen: currentImageBase64,
+            Insumos: JSON.stringify(insumosList), Receta: recipe, Link: link
         };
 
-        const btn = document.querySelector('.btn-save');
-        const originalText = btn.textContent;
-        btn.textContent = '☁️ Guardando en la nube...';
-        btn.disabled = true;
+        const btn = document.getElementById('btn-save-action');
+        const originalText = btn.textContent; btn.textContent = '️ Guardando...'; btn.disabled = true;
 
         try {
-            await fetch(API_URL, {
-                method: 'POST',
-                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-                body: JSON.stringify({ data: nuevoPlato })
-            });
-            
-            platos.push({
-                id: nuevoPlato.ID, name: nuevoPlato.Nombre, img: nuevoPlato.Imagen,
-                insumos: insumosList, recipe: nuevoPlato.Receta, link: nuevoPlato.Link
-            });
-
-            renderGrid(); closeModal();
-            alert(`✅ "${name}" guardado en la NUBE y sincronizado!`);
-        } catch (error) {
-            alert('❌ Error al guardar. Revisa tu conexión a internet.');
-        } finally {
-            btn.textContent = originalText;
-            btn.disabled = false;
-        }
+            await fetch(API_URL, { method: 'POST', headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify({ data: nuevoPlato }) });
+            platos.push({ id: newId, name: name, img: currentImageBase64, insumos: insumosList, recipe: recipe, link: link });
+            renderGrid(); closeModal(); alert(`✅ "${name}" guardado en la NUBE!`);
+        } catch (error) { alert('❌ Error al guardar.'); } 
+        finally { btn.textContent = originalText; btn.disabled = false; }
     }
+
+    // ACTUALIZAR EXISTENTE
+    async function updatePlato(id) {
+        const name = document.getElementById('inp-name').value.trim();
+        const rawInsumos = document.getElementById('inp-insumos').value;
+        const recipe = document.getElementById('inp-recipe').value.trim();
+        const link = document.getElementById('inp-link').value.trim();
+
+        if (!name) { alert('️ Escribe un nombre para el plato'); return; }
+        if (!rawInsumos.trim()) { alert('⚠️ Pega la lista de insumos'); return; }
+
+        const insumosList = rawInsumos.split('\n').map(line => line.replace(/^[\s]*[\d\.\-\*\•\)]+[\s]*/, '').trim()).filter(line => line.length > 2);
+
+        const platoActualizado = {
+            Nombre: name, Imagen: currentImageBase64,
+            Insumos: JSON.stringify(insumosList), Receta: recipe, Link: link
+        };
+
+        const btn = document.getElementById('btn-save-action');
+        const originalText = btn.textContent; btn.textContent = '☁️ Actualizando...'; btn.disabled = true;
+
+        try {
+            // Actualizar en SheetDB
+            await fetch(`${API_URL}/ID/${id}`, { method: 'PUT', headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify({ data: platoActualizado }) });
+            
+            // Actualizar localmente
+            const index = platos.findIndex(p => p.id == id);
+            if (index !== -1) {
+                platos[index] = { id: id, name: name, img: currentImageBase64, insumos: insumosList, recipe: recipe, link: link };
+            }
+            
+            renderGrid(); renderDays(); renderMenu(); closeModal(); alert(`✅ "${name}" actualizado en la NUBE!`);
+        } catch (error) { alert('❌ Error al actualizar.'); } 
+        finally { btn.textContent = originalText; btn.disabled = false; editingId = null; }
+    }
+
+    function openSelectModal(dayIndex) {
+        document.getElementById('selected-day-name').textContent = diasSemana[dayIndex];
+        const grid = document.getElementById('plato-selector-grid'); grid.innerHTML = '';
+        platos.forEach(p => { grid.innerHTML += `<div class="plato-selector-item" onclick="assignPlato(${dayIndex}, '${p.id}')"><img src="${p.img}" alt="${p.name}"><div class="name">${p.name}</div></div>`; });
+        document.getElementById('select-plato-modal').classList.add('active');
+    }
+
+    function assignPlato(dayIndex, platoId) {
+        const idx = platos.findIndex(p => p.id == platoId); menuSemanal[dayIndex] = idx; renderDays(); renderMenu(); closeModal('select-plato-modal');
+    }
+
+    function saveMenuToCloud() { alert('✅ Menú guardado localmente.'); }
 
     function resetForm() {
-        document.getElementById('inp-name').value = '';
-        document.getElementById('inp-insumos').value = '';
-        document.getElementById('inp-recipe').value = '';
-        document.getElementById('inp-link').value = '';
+        document.getElementById('inp-name').value = ''; document.getElementById('inp-insumos').value = '';
+        document.getElementById('inp-recipe').value = ''; document.getElementById('inp-link').value = '';
+        currentImageBase64 = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300";
+        document.getElementById('foto-preview').style.display = 'none';
+        document.getElementById('foto-text').style.display = 'block';
+        document.getElementById('inp-foto').value = '';
     }
 
-    // INICIALIZACIÓN: Cargar desde la nube en lugar de datos locales
+    // INICIALIZACIÓN
     loadPlatosFromCloud();
 </script>
-
 </body>
 </html>
