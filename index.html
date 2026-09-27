@@ -53,9 +53,7 @@
         .plato-card.add-card { background: #F5F0E1; display: flex; align-items: center; justify-content: center; height: 140px; border: 2px dashed #6B8E23; }
         .plato-card.add-card .plus { font-size: 40px; color: #E67E22; font-weight: 300; }
         
-        .card-actions {
-            position: absolute; top: 5px; right: 5px; display: flex; gap: 4px;
-        }
+        .card-actions { position: absolute; top: 5px; right: 5px; display: flex; gap: 4px; }
         .card-actions button {
             width: 24px; height: 24px; border-radius: 50%; border: none; 
             display: flex; align-items: center; justify-content: center; 
@@ -174,7 +172,8 @@
             position: relative; overflow: hidden; transition: border 0.2s;
         }
         .photo-upload:hover { border-color: #6B8E23; }
-    </style</head>
+    </style>
+</head>
 <body>
 
 <div class="phone-frame">
@@ -278,16 +277,16 @@
     const API_URL = 'https://sheetdb.io/api/v1/dws3xpobma4f2'; 
 
     let platos = [];
-    let currentWeekOffset = 0; // 0 = semana actual, -1 = anterior, 1 = siguiente
-    let weeklyMenus = JSON.parse(localStorage.getItem('weeklyMenus') || '{}'); // Guarda el menú por ID de semana
+    let currentWeekOffset = 0; 
+    let weeklyMenus = JSON.parse(localStorage.getItem('weeklyMenus') || '{}'); 
 
     // =========================================
     // LÓGICA DE CALENDARIO Y SEMANAS
     // =========================================
     function getWeekData(offset = 0) {
         const today = new Date();
-        const currentDay = today.getDay(); // 0 (Dom) a 6 (Sáb)
-        const diff = today.getDate() - currentDay + (currentDay === 0 ? -6 : 1); // Ajustar al Lunes
+        const currentDay = today.getDay(); 
+        const diff = today.getDate() - currentDay + (currentDay === 0 ? -6 : 1); 
         
         const monday = new Date(today);
         monday.setDate(diff + (offset * 7));
@@ -331,17 +330,12 @@
 
     function renderWeekViews() {
         const weekData = getWeekData(currentWeekOffset);
-        
-        // Actualizar textos de rango de semanas
         const rangeText = `Semana: ${weekData.rangeText}`;
         document.getElementById('week-range-text').textContent = rangeText;
         document.getElementById('menu-week-range-text').textContent = rangeText;
         document.getElementById('insumos-week-range-text').textContent = `📅 ${rangeText}`;
 
-        // Cargar menú de esta semana específica
         const currentMenu = weeklyMenus[weekData.weekId] || [null, null, null, null, null, null, null];
-        
-        // Renderizar días y menú con los datos de esta semana
         renderDays(weekData.days, currentMenu);
         renderMenu(weekData.days, currentMenu);
         renderInsumos(weekData.days, currentMenu);
@@ -392,10 +386,13 @@
             }));
             document.getElementById('header-subtitle').textContent = 'Tu base de datos de comidas';
             renderGrid();
-            renderWeekViews(); // Renderizar semanas después de tener los platos
+            renderWeekViews(); 
         } catch (error) {
             console.error("Error cargando platos:", error);
-            document.getElementById('header-subtitle').textContent = 'Error de conexión.';
+            document.getElementById('header-subtitle').textContent = 'Error de conexión. Revisa tu internet.';
+            // Renderizamos igual para que la UI no se quede congelada
+            renderGrid();
+            renderWeekViews();
         }
     }
 
